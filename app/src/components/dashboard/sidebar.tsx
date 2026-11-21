@@ -8,9 +8,12 @@ import {
   Receipt,
   TrendingUp,
   Banknote,
+  Link2,
   LogOut,
   Download,
   Wand2,
+  Briefcase,
+  Plus,
 } from "lucide-react";
 import { useDashboard } from "@/lib/dashboard-context";
 import { ReuploadButton } from "@/components/upload/reupload-button";
@@ -21,7 +24,10 @@ const mainNav = [
   { icon: Receipt, label: "Income / Expenses", href: "/income-expenses" },
   { icon: Banknote, label: "Cash Flow", href: "/cash-flow" },
   { icon: TrendingUp, label: "Investment", href: "/investment" },
+  { icon: Briefcase, label: "Portfolio", href: "/portfolio" },
   { icon: Wand2, label: "Special functions", href: "/special-functions" },
+  { icon: Plus, label: "Add Account", href: "/add-account" },
+  { icon: Link2, label: "Accounts", href: "/connections" },
 ];
 
 

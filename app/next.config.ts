@@ -14,7 +14,7 @@ const nextConfig: NextConfig = {
   // (pg-native). Keep them as external commonjs requires at runtime instead
   // of letting the bundler try to inline them — both are only used by the
   // Server-backend API routes (/api/pg/*) under Node, never in the browser.
-  serverExternalPackages: ["better-sqlite3", "pg"],
+  serverExternalPackages: ["better-sqlite3", "pg", "plaid", "snaptrade-typescript-sdk"],
   images: {
     unoptimized: true,
   },
@@ -36,9 +36,8 @@ const nextConfig: NextConfig = {
     {
       source: "/(.*)",
       headers: [
-        { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
-        { key: "Cross-Origin-Embedder-Policy", value: "require-corp" },
-        { key: "Content-Security-Policy", value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; worker-src 'self' blob:; connect-src 'self' ws:; object-src 'none'; base-uri 'self'; form-action 'self'" },
+        { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
+        { key: "Content-Security-Policy", value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.plaid.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://plaid-institution-logos.plaid.com https://plaid-merchant-logos.plaid.com; font-src 'self'; worker-src 'self' blob:; frame-src https://cdn.plaid.com; connect-src 'self' ws: https://*.plaid.com; object-src 'none'; base-uri 'self'; form-action 'self'" },
         { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=()" },
       ],
     },

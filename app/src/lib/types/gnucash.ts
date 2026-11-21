@@ -218,6 +218,10 @@ export interface MonthlyExpenseByCategory {
 /** Current holdings for a single investment account (STOCK or MUTUAL). */
 export interface InvestmentHolding {
   accountName: string;
+  /** GnuCash account GUID — stable, unique per holding account */
+  accountGuid: string;
+  /** Colon-separated path excluding the root, e.g. "Assets:Investments:Brokerage" */
+  accountPath: string;
   /** Commodity ticker/mnemonic (e.g. "AAPL") */
   ticker: string;
   sharesHeld: number;
@@ -239,6 +243,8 @@ export interface InvestmentHolding {
 export interface MonthlyInvestmentValue {
   month: string; // YYYY-MM
   ticker: string;
+  /** GnuCash account GUID this entry came from (omitted in legacy precomputed series) */
+  accountGuid?: string;
   /** Market value at month end = shares held × price at month end */
   value: number;
   /** Cumulative cost basis at month end */

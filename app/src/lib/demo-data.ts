@@ -278,6 +278,8 @@ export function generateDemoData(): DashboardData {
     const gainLossPct = Math.round((gainLoss / costBasis) * 10000) / 100;
     return {
       accountName: inv.name,
+      accountGuid: `demo-inv-${inv.ticker}`,
+      accountPath: `Assets:Investments:${inv.name}`,
       ticker: inv.ticker,
       sharesHeld: inv.shares,
       costBasis,

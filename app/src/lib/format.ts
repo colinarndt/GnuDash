@@ -85,6 +85,16 @@ export function formatAmount(value: number, commodity: string, decimals?: number
   return `${formatted} ${commodity}`;
 }
 
+/**
+ * Format a percent value: integer percent when the absolute value is at least
+ * 1%, one decimal place when it's smaller (so tiny allocations don't round to 0).
+ */
+export function formatPct(value: number): string {
+  if (!Number.isFinite(value)) return "0%";
+  if (Math.abs(value) >= 1) return `${Math.round(value)}%`;
+  return `${value.toFixed(1)}%`;
+}
+
 /** Count meaningful decimal places in a number (up to 6). */
 function significantDecimals(n: number): number {
   if (Number.isInteger(n)) return 0;

@@ -69,6 +69,12 @@ Full walkthrough — reverse-proxy / TLS, existing-GnuCash read-only mode, troub
 - **Privacy Mode** — Toggle to blur sensitive numbers on screen
 - **Demo Mode** — Try the dashboard instantly with realistic sample data
 
+### Connections (Plaid)
+- **Bank & credit card import** — Connect accounts via [Plaid Link](https://plaid.com/docs/link/) and download transactions as GnuCash-ready CSV files
+- **Per-account CSV download** — Each account gets its own CSV (Date, Description, Notes, Deposit, Withdrawal) formatted for GnuCash's built-in CSV Transaction Importer
+- **Incremental sync** — Plaid's cursor-based sync fetches only new transactions after the first full-history pull
+- **Secure storage** — Plaid credentials (`PLAID_CLIENT_ID`, `PLAID_SECRET`) stay in environment variables; access tokens are stored in a local JSON file (`app/data/plaid-items.json`, git-ignored) that never leaves your server
+
 Charts are fully interactive — click any bar or segment to drill down into breakdowns and individual transactions. The accounts page uses a tabbed, GnuCash-style interface where double-clicking an account opens its transaction register in a new tab. Transaction editing uses the same GNUCash SQLite schema, so exported files open seamlessly in GNUCash desktop.
 
 ## Screenshots
@@ -107,6 +113,21 @@ Charts are fully interactive — click any bar or segment to drill down into bre
 
 > XML files open as read-only. To enable editing and export, use a SQLite file (the default in GNUCash 3.0+). You can convert via **File > Save As** and selecting SQLite3.
 
+### Optional: Plaid (bank connections)
+
+The Connections page requires a [Plaid developer account](https://dashboard.plaid.com/signup) and is only available in the standalone Node.js build (not the static export).
+
+Set these environment variables before starting the server:
+
+```bash
+PLAID_CLIENT_ID=your_client_id
+PLAID_SECRET=your_secret
+PLAID_ENV=sandbox            # sandbox | development | production
+PLAID_DATA_DIR=/data         # optional — where to write plaid-items.json (default: app/data/)
+```
+
+Without these, the Connections page shows a setup banner and the rest of the dashboard works normally.
+
 ## Getting Started
 
 ```bash
@@ -143,6 +164,7 @@ See the **[Deployment Guide](docs/deployment.md)** for step-by-step instructions
 | Charts | Recharts, ECharts (Sankey) |
 | Database | SQLite WASM (client-side, in-browser) |
 | Persistence | Origin Private File System (OPFS) |
+| Bank connections | Plaid API + react-plaid-link (optional) |
 
 ## Project Structure
 
@@ -150,7 +172,8 @@ See the **[Deployment Guide](docs/deployment.md)** for step-by-step instructions
 app/
 ├── src/
 │   ├── app/              # Next.js pages
-│   │   └── (dashboard)/  # Dashboard pages (overview, accounts, income-expenses, cash-flow, investment)
+│   │   ├── (dashboard)/  # Dashboard pages (overview, accounts, income-expenses, cash-flow, investment, connections)
+│   │   └── api/plaid/    # Plaid API routes (link-token, exchange, items, sync)
 │   ├── components/       # React components
 │   │   ├── account-*/    # Account management (create, edit, tree view)
 │   │   ├── budget/       # Budget tracking components
@@ -173,6 +196,7 @@ app/
 │       │   ├── xml/      # GNUCash XML format parser
 │       │   ├── worker/   # Web Worker for client-side SQLite execution
 │       │   └── shared/   # Shared utilities (dates, account paths)
+│       ├── plaid/        # Plaid integration (client, token storage, CSV formatter)
 │       └── types/        # TypeScript type definitions
 ├── scripts/              # Playwright screenshot automation
 docs/

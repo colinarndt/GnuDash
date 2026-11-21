@@ -3,34 +3,102 @@
 exports[`computeInvestmentValueSeries > snapshot 1`] = `
 [
   {
+    "accountGuid": "0000001a0000001a0000001a0000001a",
     "costBasis": 1200,
     "month": "2025-01",
     "ticker": "AAPL",
     "value": 1250,
   },
   {
+    "accountGuid": "0000001a0000001a0000001a0000001a",
     "costBasis": 1200,
     "month": "2025-02",
     "ticker": "AAPL",
     "value": 1300,
   },
   {
+    "accountGuid": "0000001a0000001a0000001a0000001a",
     "costBasis": 1200,
     "month": "2025-03",
     "ticker": "AAPL",
     "value": 1350,
   },
   {
+    "accountGuid": "0000001b0000001b0000001b0000001b",
     "costBasis": 4000,
     "month": "2025-02",
     "ticker": "VWRL",
     "value": 4100,
   },
   {
+    "accountGuid": "0000001b0000001b0000001b0000001b",
     "costBasis": 4000,
     "month": "2025-03",
     "ticker": "VWRL",
     "value": 4250,
+  },
+  {
+    "accountGuid": "00000008000000080000000800000008",
+    "costBasis": 6115,
+    "month": "2025-01",
+    "ticker": "Current Account",
+    "value": 6115,
+  },
+  {
+    "accountGuid": "00000008000000080000000800000008",
+    "costBasis": 5300,
+    "month": "2025-02",
+    "ticker": "Current Account",
+    "value": 5300,
+  },
+  {
+    "accountGuid": "00000008000000080000000800000008",
+    "costBasis": 8260,
+    "month": "2025-03",
+    "ticker": "Current Account",
+    "value": 8260,
+  },
+  {
+    "accountGuid": "00000009000000090000000900000009",
+    "costBasis": 10000,
+    "month": "2025-01",
+    "ticker": "Savings",
+    "value": 10000,
+  },
+  {
+    "accountGuid": "00000009000000090000000900000009",
+    "costBasis": 10000,
+    "month": "2025-02",
+    "ticker": "Savings",
+    "value": 10000,
+  },
+  {
+    "accountGuid": "00000009000000090000000900000009",
+    "costBasis": 10000,
+    "month": "2025-03",
+    "ticker": "Savings",
+    "value": 10000,
+  },
+  {
+    "accountGuid": "0000000a0000000a0000000a0000000a",
+    "costBasis": 395,
+    "month": "2025-01",
+    "ticker": "USD Account",
+    "value": 395,
+  },
+  {
+    "accountGuid": "0000000a0000000a0000000a0000000a",
+    "costBasis": 395,
+    "month": "2025-02",
+    "ticker": "USD Account",
+    "value": 395,
+  },
+  {
+    "accountGuid": "0000000a0000000a0000000a0000000a",
+    "costBasis": 395,
+    "month": "2025-03",
+    "ticker": "USD Account",
+    "value": 395,
   },
 ]
 `;
@@ -38,7 +106,9 @@ exports[`computeInvestmentValueSeries > snapshot 1`] = `
 exports[`computeInvestments > snapshot 1`] = `
 [
   {
+    "accountGuid": "0000001a0000001a0000001a0000001a",
     "accountName": "AAPL",
+    "accountPath": "Assets:Investments:AAPL",
     "change12m": 0,
     "change12mPct": 0,
     "costBasis": 1200,
@@ -49,7 +119,9 @@ exports[`computeInvestments > snapshot 1`] = `
     "ticker": "AAPL",
   },
   {
+    "accountGuid": "0000001b0000001b0000001b0000001b",
     "accountName": "VWRL",
+    "accountPath": "Assets:Investments:VWRL",
     "change12m": 0,
     "change12mPct": 0,
     "costBasis": 4000,

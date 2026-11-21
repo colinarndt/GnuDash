@@ -18,6 +18,7 @@ import { ClosingProvider, useClosing } from "@/lib/closing-context";
 import { FileUpload } from "@/components/upload/file-upload";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { ThemeToggle } from "@/components/dashboard/theme-toggle";
+import { PriceSync } from "@/components/dashboard/price-sync";
 
 function CurrencySelector() {
   const { data, setCurrency } = useDashboard();
@@ -231,6 +232,7 @@ export default function DashboardLayout({
   return (
     <ClosingProvider>
       <PrivacyProvider>
+        <PriceSync />
         <DashboardInner>{children}</DashboardInner>
       </PrivacyProvider>
     </ClosingProvider>

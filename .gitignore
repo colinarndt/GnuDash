@@ -1,3 +1,8 @@
+# Local app data: Plaid/SnapTrade credentials, holdings, property details and
+# caches. Personal and sometimes secret -- never commit.
+app/data/*
+!app/data/.gitkeep
+
 # Dependencies
 node_modules/
 .pnp/
@@ -82,3 +87,6 @@ gnucash-source/
 *.tsbuildinfo
 next-env.d.ts
 plan/
+
+# Python virtualenv for scripts/
+scripts/.venv/
