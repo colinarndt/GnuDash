@@ -1,0 +1,26 @@
+[Unit]
+Description=GnuDash (read-only synced book, served by tailscale serve)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=gnudash
+Group=gnudash
+WorkingDirectory=/opt/gnudash/app/.next/standalone
+EnvironmentFile=/etc/gnudash/gnudash.env
+ExecStart=/opt/gnudash/node/bin/node server.js
+Restart=on-failure
+RestartSec=5
+
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+NoNewPrivileges=true
+# The app may write only its own data directory...
+ReadWritePaths=/srv/gnudash
+# ...and can never write the book, whatever the code does.
+ReadOnlyPaths=/srv/gnucash
+
+[Install]
+WantedBy=multi-user.target

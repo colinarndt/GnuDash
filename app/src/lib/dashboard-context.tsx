@@ -18,6 +18,11 @@ import {
   saveServerConfig,
   type ServerConfig,
 } from "@/lib/storage/server-config";
+import {
+  fetchServerBookFile,
+  fetchServerBookMeta,
+  type ServerBookMeta,
+} from "@/lib/storage/server-book";
 
 const STORAGE_KEY = "gnucash-dashboard-data";
 // Bumped to v15 when the Postgres backend landed (#48) — the new `backend`
@@ -27,6 +32,11 @@ const VERSION_KEY = "gnucash-dashboard-version";
 const UPLOADED_AT_KEY = "gnucash-dashboard-uploaded-at";
 const WRITABLE_KEY = "gnucash-dashboard-writable";
 const BACKEND_KEY = "gnucash-dashboard-backend";
+// ETag of the synced server book last cached in OPFS, so a reload can reuse
+// the local copy instead of downloading the whole book again.
+const SERVER_BOOK_ETAG_KEY = "gnucash-dashboard-server-book-etag";
+// How often an open tab checks whether the synced book changed.
+const SERVER_BOOK_POLL_MS = 5 * 60 * 1000;
 
 export type Backend = "local" | "postgres";
 
@@ -47,6 +57,14 @@ interface DashboardContextType {
    * AND the UI should show the amber "existing database — read only" banner.
    */
   postgresSchemaOverride: string | null;
+  /**
+   * True when this deployment serves a synced GnuCash book (GNUDASH_BOOK_PATH)
+   * and it is the open book. The book is always read-only in this mode and
+   * the upload / edit affordances are hidden.
+   */
+  isServerBook: boolean;
+  /** True until the app knows whether a server book is configured. */
+  serverBookPending: boolean;
   toggleWritable: () => Promise<void>;
   uploadFile: (file: File, writable?: boolean) => Promise<void>;
   /**
@@ -152,6 +170,8 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     string | null
   >(null);
   const clientRef = useRef<GnuCashWorkerClient | null>(null);
+  const [serverBookMode, setServerBookMode] = useState<"unknown" | "on" | "off">("unknown");
+  const serverBookEtagRef = useRef<string | null>(null);
   // Connection used by the currently-open Postgres book. Held in a ref, not
   // state, so reuploadPostgresBook can see the freshly-set value synchronously
   // even if React hasn't yet scheduled a re-render after openPostgresBook.
@@ -164,6 +184,54 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     return clientRef.current;
   }
 
+  /**
+   * Open the server's synced book read-only. Reuses the OPFS copy when its
+   * ETag still matches, so a reload doesn't download the book again.
+   */
+  async function loadServerBook(meta: Extract<ServerBookMeta, { available: true }>) {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const client = getClient();
+      await client.waitForReady();
+      let etag = meta.etag;
+      let opened = false;
+      try {
+        if (etag && localStorage.getItem(SERVER_BOOK_ETAG_KEY) === etag) {
+          opened = await client.openFromOPFS(false);
+        }
+      } catch {
+        opened = false;
+      }
+      if (!opened) {
+        const fetched = await fetchServerBookFile();
+        await client.openFile(fetched.file, false);
+        etag = fetched.etag;
+        try {
+          localStorage.setItem(SERVER_BOOK_ETAG_KEY, etag);
+        } catch {
+          // storage unavailable: we just download again next time
+        }
+      }
+      setData(await client.getFullDashboardData());
+      serverBookEtagRef.current = etag;
+      // "Loaded" shows when the book itself was last saved, not when this
+      // tab fetched it -- that is the date that tells you how fresh it is.
+      setUploadedAt(meta.modified);
+      setIsWritable(false);
+      setIsXmlSource(false);
+      setBackend("local");
+      setPostgresBookId(null);
+      setPostgresSchemaOverride(null);
+      sessionStorage.setItem(WRITABLE_KEY, "false");
+      sessionStorage.setItem(BACKEND_KEY, "local");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't load the synced book");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   // On mount: try OPFS first, then fall back to sessionStorage.
   //
   // The Postgres backend's auto-reconnect path lives in a follow-up PR; for
@@ -174,6 +242,21 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
 
     async function restore() {
+      // A deployment that serves a synced book always opens that book,
+      // read-only, ahead of any locally cached or uploaded one.
+      const serverBook = await fetchServerBookMeta();
+      if (cancelled) return;
+      if (serverBook.enabled) {
+        setServerBookMode("on");
+        if (serverBook.available) {
+          await loadServerBook(serverBook);
+        } else {
+          setError("The synced GnuCash book isn't available on the server right now.");
+        }
+        return;
+      }
+      setServerBookMode("off");
+
       const storedWritable = sessionStorage.getItem(WRITABLE_KEY) === "true";
       const storedBackend =
         (sessionStorage.getItem(BACKEND_KEY) as Backend | null) ?? "local";
@@ -271,12 +354,42 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     }
   }, [data]);
 
+  // Keep an open tab current with the synced book: check on focus and every
+  // few minutes, and reload when the file on the server has changed.
+  useEffect(() => {
+    if (serverBookMode !== "on") return;
+    let busy = false;
+    async function check() {
+      if (busy || document.visibilityState !== "visible") return;
+      busy = true;
+      try {
+        const meta = await fetchServerBookMeta();
+        if (meta.enabled && meta.available && meta.etag !== serverBookEtagRef.current) {
+          await loadServerBook(meta);
+        }
+      } finally {
+        busy = false;
+      }
+    }
+    const timer = setInterval(check, SERVER_BOOK_POLL_MS);
+    document.addEventListener("visibilitychange", check);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", check);
+    };
+    // loadServerBook only uses setters and refs, so re-subscribing on every
+    // render would add nothing.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serverBookMode]);
+
   async function toggleWritable() {
     // Interop mode points at a schema gnudash doesn't own — flipping writable
     // would re-open the local OPFS cache read-write and expose every edit
     // affordance (top badge + per-row edit/delete), yet writes would never
     // reach Postgres (no sync client is wired) and could corrupt on reupload.
     if (postgresSchemaOverride !== null) return;
+    // The synced server book is a read-only mirror of the desktop book.
+    if (serverBookMode === "on") return;
     const newWritable = !isWritable;
     try {
       const client = getClient();
@@ -294,6 +407,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   }
 
   async function uploadFile(file: File, writable: boolean = false) {
+    if (serverBookMode === "on") return;
     setIsLoading(true);
     setError(null);
 
@@ -635,6 +749,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   }
 
   function clearData() {
+    if (serverBookMode === "on") return;
     setData(null);
     setError(null);
     setUploadedAt(null);
@@ -786,7 +901,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
   return (
     <DashboardContext.Provider
-      value={{ data, isLoading, error, uploadedAt, isWritable, isXmlSource, backend, postgresBookId, postgresSchemaOverride, toggleWritable, uploadFile, openPostgresBook, importFileToPostgres, reuploadPostgresBook, openExistingGnuCashBook, createFreshLocalBook, createFreshPostgresBook, loadDemo, clearData, createTransaction, deleteTransaction: deleteTransactionFn, editTransaction, bulkEditTransactions: bulkEditTransactionsFn, createAccount: createAccountFn, updateAccount: updateAccountFn, deleteAccountWithReallocation: deleteAccountWithReallocationFn, createCommodity: createCommodityFn, addPrice: addPriceFn, editPrice: editPriceFn, deletePrice: deletePriceFn, createBudget: createBudgetFn, updateBudget: updateBudgetFn, deleteBudget: deleteBudgetFn, setBudgetAmount: setBudgetAmountFn, clearBudgetAmount: clearBudgetAmountFn, exportFile, setCurrency: setCurrencyFn }}
+      value={{ data, isLoading, error, uploadedAt, isWritable, isXmlSource, backend, postgresBookId, postgresSchemaOverride, isServerBook: serverBookMode === "on", serverBookPending: serverBookMode === "unknown", toggleWritable, uploadFile, openPostgresBook, importFileToPostgres, reuploadPostgresBook, openExistingGnuCashBook, createFreshLocalBook, createFreshPostgresBook, loadDemo, clearData, createTransaction, deleteTransaction: deleteTransactionFn, editTransaction, bulkEditTransactions: bulkEditTransactionsFn, createAccount: createAccountFn, updateAccount: updateAccountFn, deleteAccountWithReallocation: deleteAccountWithReallocationFn, createCommodity: createCommodityFn, addPrice: addPriceFn, editPrice: editPriceFn, deletePrice: deletePriceFn, createBudget: createBudgetFn, updateBudget: updateBudgetFn, deleteBudget: deleteBudgetFn, setBudgetAmount: setBudgetAmountFn, clearBudgetAmount: clearBudgetAmountFn, exportFile, setCurrency: setCurrencyFn }}
     >
       {children}
     </DashboardContext.Provider>

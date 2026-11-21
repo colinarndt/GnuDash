@@ -75,6 +75,11 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
     isXmlSource,
     toggleWritable,
     postgresSchemaOverride,
+    isServerBook,
+    serverBookPending,
+    isLoading,
+    error,
+    uploadedAt,
   } = useDashboard();
   const { hideValues, toggleHideValues } = usePrivacy();
   const { excludeClosing, toggleExcludeClosing } = useClosing();
@@ -82,6 +87,15 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
   const [sidebarHovered, setSidebarHovered] = useState(false);
 
   if (!data) {
+    if (isServerBook || serverBookPending) {
+      return (
+        <div className="flex h-screen flex-col items-center justify-center gap-2 bg-muted px-6 text-center">
+          <p className="text-sm text-muted-foreground">
+            {error ?? (isLoading || serverBookPending ? "Loading your GnuCash book…" : "Waiting for the synced book…")}
+          </p>
+        </div>
+      );
+    }
     return <FileUpload />;
   }
 
@@ -138,6 +152,15 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
                 <span className="hidden sm:inline">XML &middot; Read-only</span>
               </span>
             )}
+            {isServerBook && (
+              <span
+                className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground"
+                title={`Synced from the server${uploadedAt ? `, saved ${uploadedAt.toLocaleString()}` : ""}. Read-only: edit in GnuCash desktop.`}
+              >
+                <Lock className="h-3 w-3" />
+                <span className="hidden sm:inline">Synced &middot; Read-only</span>
+              </span>
+            )}
             {postgresSchemaOverride !== null && data && (
               <span
                 className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground"
@@ -147,7 +170,7 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
                 <span className="hidden sm:inline">Read-only</span>
               </span>
             )}
-            {postgresSchemaOverride === null && !isXmlSource && isWritable && (
+            {!isServerBook && postgresSchemaOverride === null && !isXmlSource && isWritable && (
               <button
                 onClick={toggleWritable}
                 className="flex items-center gap-1.5 rounded-lg border border-[#3B6B8A] bg-[#3B6B8A]/10 px-3 py-1.5 text-xs font-medium text-[#3B6B8A] transition-colors hover:bg-[#3B6B8A]/20 dark:border-[#6FA4C7] dark:text-[#6FA4C7] dark:bg-[#6FA4C7]/10 dark:hover:bg-[#6FA4C7]/20"
@@ -157,7 +180,7 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
                 <span className="hidden sm:inline">Editing</span>
               </button>
             )}
-            {postgresSchemaOverride === null && !isXmlSource && !isWritable && data && (
+            {!isServerBook && postgresSchemaOverride === null && !isXmlSource && !isWritable && data && (
               <button
                 onClick={toggleWritable}
                 className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"

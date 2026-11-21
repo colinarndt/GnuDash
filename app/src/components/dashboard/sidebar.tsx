@@ -37,7 +37,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ onNavigate, expanded }: SidebarProps) {
-  const { clearData, uploadedAt, exportFile, backend } = useDashboard();
+  const { clearData, uploadedAt, exportFile, backend, isServerBook } = useDashboard();
   const pathname = usePathname();
 
   return (
@@ -104,6 +104,7 @@ export function Sidebar({ onNavigate, expanded }: SidebarProps) {
           {expanded && "Export .gnucash file"}
         </button>
         {backend === "postgres" && <ReuploadButton expanded={expanded} />}
+        {!isServerBook && (
         <button
           onClick={clearData}
           title={backend === "postgres" ? "Disconnect" : "Upload new file"}
@@ -116,9 +117,10 @@ export function Sidebar({ onNavigate, expanded }: SidebarProps) {
           <LogOut className="h-[18px] w-[18px] shrink-0 text-muted-foreground/70" />
           {expanded && (backend === "postgres" ? "Disconnect" : "Upload new file")}
         </button>
+        )}
         {expanded && uploadedAt && (
           <p className="mt-1.5 px-3 text-xs text-muted-foreground/70">
-            Loaded {uploadedAt.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}{" "}
+            {isServerBook ? "Book saved" : "Loaded"} {uploadedAt.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}{" "}
             {uploadedAt.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}
           </p>
         )}
