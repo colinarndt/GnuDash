@@ -16,9 +16,14 @@ export async function POST() {
     const { data } = await client.authentication.loginSnapTradeUser({
       userId: user.userId,
       userSecret: user.userSecret,
-      body: { redirectUri },
+      customRedirect: redirectUri,
     });
-    const redirectURL = (data as any).redirectURI as string;
+    // The SDK types the response as LoginRedirectURI | EncryptedResponse;
+    // only the former carries a portal URL.
+    const redirectURL = "redirectURI" in data ? data.redirectURI : undefined;
+    if (!redirectURL) {
+      return NextResponse.json({ error: "SnapTrade did not return a connection URL" }, { status: 502 });
+    }
     return NextResponse.json({ redirectURL });
   } catch (err) {
     return NextResponse.json({ error: (err as Error).message }, { status: 500 });

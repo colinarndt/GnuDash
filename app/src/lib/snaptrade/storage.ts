@@ -91,7 +91,15 @@ export async function getAuthorizations(): Promise<SnapTradeAuthorization[]> {
   return (await readStore()).authorizations;
 }
 
-export async function upsertAuthorization(auth: Omit<SnapTradeAuthorization, "holdings" | "transactions" | "lastSynced" | "displayName" | "connectedAt">): Promise<void> {
+/** An account as SnapTrade reports it, before the user's local settings are applied. */
+export type IncomingSnapTradeAccount = Omit<SnapTradeAccount, "accountType" | "hidden" | "displayName">;
+
+export async function upsertAuthorization(
+  auth: Omit<
+    SnapTradeAuthorization,
+    "accounts" | "holdings" | "transactions" | "balanceHistory" | "lastSynced" | "displayName" | "connectedAt"
+  > & { accounts: IncomingSnapTradeAccount[] },
+): Promise<void> {
   const store = await readStore();
   const idx = store.authorizations.findIndex((a) => a.authorizationId === auth.authorizationId);
   if (idx >= 0) {
@@ -106,6 +114,7 @@ export async function upsertAuthorization(auth: Omit<SnapTradeAuthorization, "ho
   } else {
     store.authorizations.push({
       ...auth,
+      accounts: auth.accounts.map((a) => ({ ...a, accountType: null, hidden: false, displayName: null })),
       holdings: {},
       transactions: {},
       balanceHistory: {},
