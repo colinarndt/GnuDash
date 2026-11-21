@@ -35,7 +35,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import type { BudgetCategoryRow, LedgerTransaction } from "@/lib/types/gnucash";
+import type { BudgetCategoryRow } from "@/lib/types/gnucash";
 
 const SankeyECharts = dynamic(
   () => import("@/components/sankey/sankey-echarts").then((m) => ({ default: m.SankeyECharts })),
@@ -68,33 +68,52 @@ function CashFlowSankeySection({ filters }: { filters: SankeyFilterState }) {
   const { excludeClosing } = useClosing();
   const [depth, setDepth] = useState(1);
 
-  const { period, setPeriod, customRange, setCustomRange, selectedInflow, setSelectedInflow, selectedOutflow, setSelectedOutflow } = filters;
+  const { period, customRange, selectedInflow, setSelectedInflow, selectedOutflow, setSelectedOutflow } = filters;
 
-  const activeInflow = excludeClosing && data?.monthlyCashInflowByCategoryExcludingClosing
-    ? data.monthlyCashInflowByCategoryExcludingClosing : data?.monthlyCashInflowByCategory ?? [];
-  const activeOutflow = excludeClosing && data?.monthlyCashOutflowByCategoryExcludingClosing
-    ? data.monthlyCashOutflowByCategoryExcludingClosing : data?.monthlyCashOutflowByCategory ?? [];
-  const activeCashFlow = excludeClosing && data?.cashFlowSeriesExcludingClosing
-    ? data.cashFlowSeriesExcludingClosing : data?.cashFlowSeries ?? [];
-  const activeInflowColors = excludeClosing && data?.cashInflowCategoryColorsExcludingClosing
-    ? data.cashInflowCategoryColorsExcludingClosing : data?.cashInflowCategoryColors ?? {};
-  const activeOutflowColors = excludeClosing && data?.cashOutflowCategoryColorsExcludingClosing
-    ? data.cashOutflowCategoryColorsExcludingClosing : data?.cashOutflowCategoryColors ?? {};
+  const activeInflow = useMemo(
+    () => excludeClosing && data?.monthlyCashInflowByCategoryExcludingClosing
+      ? data.monthlyCashInflowByCategoryExcludingClosing
+      : data?.monthlyCashInflowByCategory ?? [],
+    [data, excludeClosing],
+  );
+  const activeOutflow = useMemo(
+    () => excludeClosing && data?.monthlyCashOutflowByCategoryExcludingClosing
+      ? data.monthlyCashOutflowByCategoryExcludingClosing
+      : data?.monthlyCashOutflowByCategory ?? [],
+    [data, excludeClosing],
+  );
+  const activeCashFlow = useMemo(
+    () => excludeClosing && data?.cashFlowSeriesExcludingClosing
+      ? data.cashFlowSeriesExcludingClosing
+      : data?.cashFlowSeries ?? [],
+    [data, excludeClosing],
+  );
+  const activeInflowColors = useMemo(
+    () => excludeClosing && data?.cashInflowCategoryColorsExcludingClosing
+      ? data.cashInflowCategoryColorsExcludingClosing
+      : data?.cashInflowCategoryColors ?? {},
+    [data, excludeClosing],
+  );
+  const activeOutflowColors = useMemo(
+    () => excludeClosing && data?.cashOutflowCategoryColorsExcludingClosing
+      ? data.cashOutflowCategoryColorsExcludingClosing
+      : data?.cashOutflowCategoryColors ?? {},
+    [data, excludeClosing],
+  );
 
   const inflowCategories = useMemo(() => getTopLevelCategories(activeInflow), [activeInflow]);
   const outflowCategories = useMemo(() => getTopLevelCategories(activeOutflow), [activeOutflow]);
 
   const [initialized, setInitialized] = useState(false);
   useEffect(() => {
-    if (!initialized && inflowCategories.length > 0) {
+    if (initialized || inflowCategories.length === 0) return;
+    const timeout = window.setTimeout(() => {
       setSelectedInflow(new Set(inflowCategories));
       setSelectedOutflow(new Set(outflowCategories));
       setInitialized(true);
-    }
+    }, 0);
+    return () => window.clearTimeout(timeout);
   }, [inflowCategories, outflowCategories, initialized, setSelectedInflow, setSelectedOutflow]);
-
-  const inflowKey = Array.from(selectedInflow).sort().join(",");
-  const outflowKey = Array.from(selectedOutflow).sort().join(",");
 
   const sankeyData = useMemo(() => {
     if (!data || !initialized) return null;
@@ -110,8 +129,7 @@ function CashFlowSankeySection({ filters }: { filters: SankeyFilterState }) {
       selectedOutflowCategories: selectedOutflow,
       customRange: customRange ?? undefined,
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, period, customRange, depth, inflowKey, outflowKey, initialized, excludeClosing]);
+  }, [activeCashFlow, activeInflow, activeInflowColors, activeOutflow, activeOutflowColors, customRange, data, depth, initialized, period, selectedInflow, selectedOutflow]);
 
   const echartsData = useMemo(
     () => (sankeyData ? toEChartsFormat(sankeyData, "source", "#9A9FA5") : null),
@@ -162,12 +180,24 @@ function CashFlowBarChart({ filters }: { filters: SankeyFilterState }) {
   const { excludeClosing } = useClosing();
   const { period, setPeriod, customRange, setCustomRange } = filters;
 
-  const activeInflow = excludeClosing && data?.monthlyCashInflowByCategoryExcludingClosing
-    ? data.monthlyCashInflowByCategoryExcludingClosing : data?.monthlyCashInflowByCategory ?? [];
-  const activeOutflow = excludeClosing && data?.monthlyCashOutflowByCategoryExcludingClosing
-    ? data.monthlyCashOutflowByCategoryExcludingClosing : data?.monthlyCashOutflowByCategory ?? [];
-  const activeCashFlow = excludeClosing && data?.cashFlowSeriesExcludingClosing
-    ? data.cashFlowSeriesExcludingClosing : data?.cashFlowSeries ?? [];
+  const activeInflow = useMemo(
+    () => excludeClosing && data?.monthlyCashInflowByCategoryExcludingClosing
+      ? data.monthlyCashInflowByCategoryExcludingClosing
+      : data?.monthlyCashInflowByCategory ?? [],
+    [data, excludeClosing],
+  );
+  const activeOutflow = useMemo(
+    () => excludeClosing && data?.monthlyCashOutflowByCategoryExcludingClosing
+      ? data.monthlyCashOutflowByCategoryExcludingClosing
+      : data?.monthlyCashOutflowByCategory ?? [],
+    [data, excludeClosing],
+  );
+  const activeCashFlow = useMemo(
+    () => excludeClosing && data?.cashFlowSeriesExcludingClosing
+      ? data.cashFlowSeriesExcludingClosing
+      : data?.cashFlowSeries ?? [],
+    [data, excludeClosing],
+  );
 
   const dataRange = useMemo(
     () => getDataRange(activeCashFlow) ?? { min: "2020-01", max: "2026-01" },
@@ -244,7 +274,7 @@ function CashFlowBarChart({ filters }: { filters: SankeyFilterState }) {
             <span className="text-xs text-[#6F767E]">Outflow</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="h-0.5 w-4 border-t-2 border-dashed border-[#1A1D1F]" />
+            <div className="h-0.5 w-4 border-t-2 border-dashed" style={{ borderColor: "var(--chart-net-line)" }} />
             <span className="text-xs text-[#6F767E]">Net</span>
           </div>
         </div>
@@ -253,17 +283,17 @@ function CashFlowBarChart({ filters }: { filters: SankeyFilterState }) {
           <div className="h-[220px]">
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={chartData} margin={{ top: 5, right: 5, bottom: 0, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#EFEFEF" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" vertical={false} />
                 <XAxis
                   dataKey="month"
                   tickFormatter={formatMonthLabel}
-                  tick={{ fontSize: 11, fill: "#9A9FA5" }}
+                  tick={{ fontSize: 11, fill: "var(--chart-axis-tick)" }}
                   axisLine={false}
                   tickLine={false}
                 />
                 <YAxis
                   tickFormatter={(v) => formatCurrencyShort(v, currency)}
-                  tick={{ fontSize: 11, fill: "#9A9FA5" }}
+                  tick={{ fontSize: 11, fill: "var(--chart-axis-tick)" }}
                   axisLine={false}
                   tickLine={false}
                   width={50}
@@ -280,15 +310,16 @@ function CashFlowBarChart({ filters }: { filters: SankeyFilterState }) {
                     return `${months[parseInt(m) - 1]} ${y}`;
                   }}
                   contentStyle={{
-                    backgroundColor: "white",
-                    border: "1px solid #EFEFEF",
+                    backgroundColor: "var(--popover)",
+                    color: "var(--popover-foreground)",
+                    border: "1px solid var(--border)",
                     borderRadius: "10px",
                     fontSize: "13px",
                   }}
                 />
                 <Bar dataKey="inflow" fill="#3B6B8A" radius={[3, 3, 0, 0]} barSize={14} />
                 <Bar dataKey="outflow" fill="#F87171" radius={[3, 3, 0, 0]} barSize={14} />
-                <Line type="monotone" dataKey="net" stroke="#1A1D1F" strokeWidth={2} strokeDasharray="6 4" dot={false} />
+                <Line type="monotone" dataKey="net" stroke="var(--chart-net-line)" strokeWidth={2} strokeDasharray="6 4" dot={false} />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
@@ -332,12 +363,16 @@ const TX_PAGE_SIZE = 25;
 function CashFlowTransactions({ filters }: { filters: SankeyFilterState }) {
   const { data } = useDashboard();
   const { excludeClosing } = useClosing();
-  const [page, setPage] = useState(0);
+  const [pageState, setPageState] = useState({ key: "", page: 0 });
 
   const { period, customRange, selectedInflow, selectedOutflow } = filters;
 
-  const activeCashFlow = excludeClosing && data?.cashFlowSeriesExcludingClosing
-    ? data.cashFlowSeriesExcludingClosing : data?.cashFlowSeries ?? [];
+  const activeCashFlow = useMemo(
+    () => excludeClosing && data?.cashFlowSeriesExcludingClosing
+      ? data.cashFlowSeriesExcludingClosing
+      : data?.cashFlowSeries ?? [],
+    [data, excludeClosing],
+  );
 
   const validMonths = useMemo(
     () => getMonthsForPeriod(activeCashFlow, period, customRange ?? undefined),
@@ -374,7 +409,7 @@ function CashFlowTransactions({ filters }: { filters: SankeyFilterState }) {
 
   // Reset page when filters change
   const filterKey = `${period}-${customRange?.start}-${customRange?.end}-${Array.from(allSelected).sort().join(",")}`;
-  useMemo(() => setPage(0), [filterKey]);
+  const page = pageState.key === filterKey ? pageState.page : 0;
 
   if (!data || filtered.length === 0) return null;
 
@@ -405,9 +440,7 @@ function CashFlowTransactions({ filters }: { filters: SankeyFilterState }) {
             </thead>
             <tbody>
               {pageData.map((tx) => {
-                // Find the BANK/CASH split(s) to show the cash amount
-                const cashSplits = tx.splits.filter((s) => BANK_CASH.has(s.accountType));
-                const cashAmount = cashSplits.reduce((sum, s) => sum + s.quantity, 0);
+                const cashAmount = tx.cashAmount;
                 // Find the primary non-cash counterparty for the account column
                 const counterparty = tx.splits.find((s) => !BANK_CASH.has(s.accountType) && s.accountType !== "EQUITY");
 
@@ -438,14 +471,14 @@ function CashFlowTransactions({ filters }: { filters: SankeyFilterState }) {
             </span>
             <div className="flex gap-1">
               <button
-                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                onClick={() => setPageState({ key: filterKey, page: Math.max(0, page - 1) })}
                 disabled={page === 0}
                 className="rounded-md border border-[#EFEFEF] px-2.5 py-1 text-xs text-[#6F767E] transition-colors hover:bg-[#F4F5F7] disabled:opacity-30"
               >
                 Prev
               </button>
               <button
-                onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                onClick={() => setPageState({ key: filterKey, page: Math.min(totalPages - 1, page + 1) })}
                 disabled={page >= totalPages - 1}
                 className="rounded-md border border-[#EFEFEF] px-2.5 py-1 text-xs text-[#6F767E] transition-colors hover:bg-[#F4F5F7] disabled:opacity-30"
               >
@@ -504,7 +537,7 @@ function CashFlowBudgetContent({ data }: { data: NonNullable<ReturnType<typeof u
     }
     walk(data.accounts);
     return map;
-  }, [data.accounts]);
+  }, [data]);
 
   const allOutflowCategories = useMemo(
     () => {
@@ -562,15 +595,6 @@ function CashFlowBudgetContent({ data }: { data: NonNullable<ReturnType<typeof u
     }
   }, []);
 
-  if (!cashFlowData || cashFlowData.budgets.length === 0) {
-    return (
-      <div className="flex flex-col gap-4 sm:gap-6">
-        <h2 className="text-lg font-semibold text-[#1A1D1F] sm:text-xl">Cash Flow Budget</h2>
-        <NoBudgetState message="Create a budget in GNUCash to see your cash flow vs budget here. Go to Actions > Budget > New Budget in GNUCash." />
-      </div>
-    );
-  }
-
   const ytdVarianceMap = useMemo(() => {
     if (!activeBudgetData || viewMode !== "monthly") return new Map<string, number>();
     const source = isInflow ? activeBudgetData.inflowCategories : activeBudgetData.outflowCategories;
@@ -588,6 +612,15 @@ function CashFlowBudgetContent({ data }: { data: NonNullable<ReturnType<typeof u
     }
     return map;
   }, [activeBudgetData, viewMode, selectedMonth, yearStr, isInflow]);
+
+  if (!cashFlowData || cashFlowData.budgets.length === 0) {
+    return (
+      <div className="flex flex-col gap-4 sm:gap-6">
+        <h2 className="text-lg font-semibold text-[#1A1D1F] sm:text-xl">Cash Flow Budget</h2>
+        <NoBudgetState message="Create a budget in GNUCash to see your cash flow vs budget here. Go to Actions > Budget > New Budget in GNUCash." />
+      </div>
+    );
+  }
 
   const c = data.currency;
   const hasInflows = allInflowCategories.length > 0;

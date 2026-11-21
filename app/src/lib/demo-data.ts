@@ -12,7 +12,6 @@ import type {
   UpcomingBill,
   ExpenseTransaction,
   LedgerTransaction,
-  LedgerSplit,
   BudgetData,
   BudgetCategoryRow,
 } from "@/lib/types/gnucash";
@@ -373,6 +372,7 @@ export function generateDemoData(): DashboardData {
       date: tx.date,
       description: tx.description,
       num: "",
+      cashAmount: -tx.amount,
       splits: [
         {
           accountGuid: "",
@@ -407,6 +407,7 @@ export function generateDemoData(): DashboardData {
       date: tx.date,
       description: tx.description,
       num: tx.accountName === "Salary" ? String(ri(1000, 9999)) : "",
+      cashAmount: tx.amount,
       splits: [
         {
           accountGuid: "",
@@ -442,6 +443,7 @@ export function generateDemoData(): DashboardData {
       date: `${month}-${String(ri(1, 5)).padStart(2, "0")}`,
       description: "Transfer to savings",
       num: "",
+      cashAmount: 0,
       splits: [
         {
           accountGuid: "",
@@ -476,7 +478,7 @@ export function generateDemoData(): DashboardData {
   const budgetData = generateBudgetData(
     expenseAccounts, incomeAccounts, expenseRanges, incomeRanges,
     monthlyExpensesByCategory, monthlyIncomeByCategory,
-    months, currentYear, guid, rand
+    months, currentYear, guid
   );
 
   return {
@@ -568,7 +570,6 @@ function generateBudgetData(
   months: string[],
   currentYear: number,
   guidFn: () => string,
-  rand: () => number,
 ): BudgetData {
   const budgetGuid = guidFn();
   const yearStr = currentYear.toString();

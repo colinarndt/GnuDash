@@ -146,12 +146,12 @@ export function ValueOverTimeChart({ series, currency, selectedTicker, timeline,
           <div className="h-[260px]">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#EFEFEF" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" vertical={false} />
                 <XAxis
                   dataKey="label"
-                  tick={{ fontSize: 11, fill: "#9A9FA5" }}
+                  tick={{ fontSize: 11, fill: "var(--chart-axis-tick)" }}
                   tickLine={false}
-                  axisLine={{ stroke: "#EFEFEF" }}
+                  axisLine={{ stroke: "var(--chart-grid)" }}
                   interval="preserveStartEnd"
                 />
                 <YAxis
@@ -159,7 +159,7 @@ export function ValueOverTimeChart({ series, currency, selectedTicker, timeline,
                   // when the position is large vs the range. Floor clamped to
                   // 0 so inception-style series still anchor at zero.
                   domain={yDomain}
-                  tick={{ fontSize: 11, fill: "#9A9FA5" }}
+                  tick={{ fontSize: 11, fill: "var(--chart-axis-tick)" }}
                   tickLine={false}
                   axisLine={false}
                   tickFormatter={(v) =>
@@ -176,8 +176,9 @@ export function ValueOverTimeChart({ series, currency, selectedTicker, timeline,
                   ]}
                   labelFormatter={(label) => String(label)}
                   contentStyle={{
-                    backgroundColor: "white",
-                    border: "1px solid #EFEFEF",
+                    backgroundColor: "var(--popover)",
+                    color: "var(--popover-foreground)",
+                    border: "1px solid var(--border)",
                     borderRadius: "10px",
                     fontSize: "13px",
                     boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
@@ -202,7 +203,7 @@ export function ValueOverTimeChart({ series, currency, selectedTicker, timeline,
                   <Line
                     type="monotone"
                     dataKey="costBasis"
-                    stroke="#9A9FA5"
+                    stroke="var(--chart-axis-tick)"
                     strokeWidth={1.5}
                     strokeDasharray="6 4"
                     dot={false}

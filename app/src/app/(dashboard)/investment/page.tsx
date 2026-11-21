@@ -628,15 +628,16 @@ export default function InvestmentPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [xrayTickers]);
 
-  if (!data) return null;
-
-  const c = data.currency;
   const activeHoldings = investedHoldings.filter(
     (h) => Math.abs(h.marketValue) >= 0.01 || Math.abs(h.sharesHeld) >= 0.0001,
   );
 
   const allItems = toGrouped(investedHoldings);
   const activeItems = filterActive(allItems);
+
+  if (!data) return null;
+
+  const c = data.currency;
 
   return (
     <div className="flex flex-col gap-4 sm:gap-6">

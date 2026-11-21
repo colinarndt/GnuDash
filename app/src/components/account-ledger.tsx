@@ -55,7 +55,7 @@ export function AccountLedger({
   const [duplicateError, setDuplicateError] = useState<string | null>(null);
   const entryRef = useRef<InlineEntryHandle | null>(null);
   const [search, setSearch] = useState("");
-  const [page, setPage] = useState(0);
+  const [pageState, setPageState] = useState({ key: "", page: 0 });
   const [sortField, setSortField] = useState<SortField>("date");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [expandedTx, setExpandedTx] = useState<Set<string>>(new Set());
@@ -80,7 +80,6 @@ export function AccountLedger({
       setSortField(field);
       setSortDir(field === "date" ? "asc" : "desc");
     }
-    setPage(0);
   }
 
   // Filter transactions to those involving this account, and compute running balance
@@ -99,8 +98,8 @@ export function AccountLedger({
     const matching: { tx: LedgerTransaction; accountSplit: LedgerSplit; transferSplits: LedgerSplit[] }[] = [];
 
     for (const tx of data.ledgerTransactions) {
-      const accountSplit = tx.splits.find((s) => s.accountGuid === account.guid);
-      if (!accountSplit) continue;
+      const accountSplits = tx.splits.filter((s) => s.accountGuid === account.guid);
+      if (accountSplits.length === 0) continue;
 
       if (searchLower) {
         const descMatch = tx.description.toLowerCase().includes(searchLower);
@@ -114,7 +113,17 @@ export function AccountLedger({
         if (!descMatch && !numMatch && !splitMatch) continue;
       }
 
-      const transferSplits = tx.splits.filter((s) => s !== accountSplit);
+      const [firstAccountSplit, ...otherAccountSplits] = accountSplits;
+      const accountSplit: LedgerSplit = {
+        ...firstAccountSplit,
+        amount: accountSplits.reduce((sum, s) => sum + s.amount, 0),
+        quantity: accountSplits.reduce((sum, s) => sum + s.quantity, 0),
+        memo: accountSplits.map((s) => s.memo).filter(Boolean).join("; "),
+        reconcileState: otherAccountSplits.find((s) => s.reconcileState !== firstAccountSplit.reconcileState)?.reconcileState
+          ? "n"
+          : firstAccountSplit.reconcileState,
+      };
+      const transferSplits = tx.splits.filter((s) => s.accountGuid !== account.guid);
       matching.push({ tx, accountSplit, transferSplits });
     }
 
@@ -151,9 +160,8 @@ export function AccountLedger({
     return { rows: sorted, runningBalance: balance };
   }, [data, account.guid, search, sortField, sortDir, isCredit]);
 
-  // Reset page on search change
-  const filterKey = search;
-  useMemo(() => setPage(0), [filterKey]);
+  const filterKey = `${search}-${sortField}-${sortDir}`;
+  const page = pageState.key === filterKey ? pageState.page : 0;
 
   if (!data) return null;
 
@@ -285,7 +293,6 @@ export function AccountLedger({
                       onEdit={(tx) => setEditingTxGuid(tx.guid)}
                       onDelete={isWritable ? (guid) => setDeletingGuid(guid) : undefined}
                       onDuplicate={isWritable ? (tx) => { setDuplicatingTx(tx); setDuplicateDate(new Date().toISOString().slice(0, 10)); setDuplicateError(null); } : undefined}
-                      transferSplits={row.transferSplits}
                       accountSplit={row.accountSplit}
                       baseCurrency={data.currency}
                     />
@@ -305,14 +312,14 @@ export function AccountLedger({
               </span>
               <div className="flex gap-1">
                 <button
-                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                  onClick={() => setPageState({ key: filterKey, page: Math.max(0, page - 1) })}
                   disabled={page === 0}
                   className="rounded-md border border-[#EFEFEF] px-2.5 py-1 text-xs text-[#6F767E] transition-colors hover:bg-[#F4F5F7] disabled:opacity-30 disabled:hover:bg-transparent"
                 >
                   Prev
                 </button>
                 <button
-                  onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                  onClick={() => setPageState({ key: filterKey, page: Math.min(totalPages - 1, page + 1) })}
                   disabled={page >= totalPages - 1}
                   className="rounded-md border border-[#EFEFEF] px-2.5 py-1 text-xs text-[#6F767E] transition-colors hover:bg-[#F4F5F7] disabled:opacity-30 disabled:hover:bg-transparent"
                 >
@@ -437,7 +444,6 @@ function RegisterRow({
   onEdit,
   onDelete,
   onDuplicate,
-  transferSplits,
   accountSplit,
   baseCurrency,
 }: {
@@ -455,7 +461,6 @@ function RegisterRow({
   onEdit?: (tx: LedgerTransaction) => void;
   onDelete?: (guid: string) => void;
   onDuplicate?: (tx: LedgerTransaction) => void;
-  transferSplits: LedgerSplit[];
   accountSplit: LedgerSplit;
   baseCurrency: string;
 }) {

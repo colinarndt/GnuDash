@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useRef, useEffect, useCallback } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import {
   Sheet,
   SheetContent,
@@ -10,8 +10,8 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useDashboard } from "@/lib/dashboard-context";
-import { Search, Check, Plus } from "lucide-react";
-import type { AccountNode, CommodityInfo } from "@/lib/types/gnucash";
+import { Search, Plus } from "lucide-react";
+import type { AccountNode } from "@/lib/types/gnucash";
 
 // ── Constants ───────────────────────────────────────────────────
 
@@ -71,13 +71,11 @@ function SimpleCombobox({
   placeholder: string;
 }) {
   const selected = items.find((i) => i.guid === value);
-  const [query, setQuery] = useState(selected?.label ?? "");
+  const selectedLabel = selected?.label ?? "";
+  const [draftQuery, setDraftQuery] = useState(selectedLabel);
   const [open, setOpen] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    setQuery(selected?.label ?? "");
-  }, [selected]);
+  const query = open ? draftQuery : selectedLabel;
 
   const filtered = useMemo(() => {
     if (!query.trim()) return items.slice(0, 50);
@@ -94,8 +92,8 @@ function SimpleCombobox({
         <input
           type="text"
           value={query}
-          onChange={(e) => { setQuery(e.target.value); setOpen(true); if (!e.target.value) onChange("", ""); }}
-          onFocus={() => setOpen(true)}
+          onChange={(e) => { setDraftQuery(e.target.value); setOpen(true); if (!e.target.value) onChange("", ""); }}
+          onFocus={() => { setDraftQuery(selectedLabel); setOpen(true); }}
           onBlur={() => setTimeout(() => setOpen(false), 200)}
           placeholder={placeholder}
           className="h-8 w-full rounded-md border border-[#EFEFEF] bg-white pl-7 pr-2 text-xs text-[#1A1D1F] placeholder:text-[#9A9FA5] focus:border-[#3B6B8A] focus:outline-none focus:ring-1 focus:ring-[#3B6B8A]"
@@ -107,7 +105,7 @@ function SimpleCombobox({
             <div
               key={item.guid}
               onMouseDown={(e) => e.preventDefault()}
-              onClick={() => { onChange(item.guid, item.label); setQuery(item.label); setOpen(false); }}
+              onClick={() => { onChange(item.guid, item.label); setDraftQuery(item.label); setOpen(false); }}
               className={`cursor-pointer px-2.5 py-1.5 text-xs hover:bg-[#3B6B8A]/10 ${item.guid === value ? "font-medium text-[#3B6B8A]" : "text-[#1A1D1F]"}`}
             >
               <div>{item.label}</div>
@@ -139,7 +137,6 @@ export function AccountEditorSheet({
   const [name, setName] = useState("");
   const [accountType, setAccountType] = useState("EXPENSE");
   const [parentGuid, setParentGuid] = useState("");
-  const [parentPath, setParentPath] = useState("");
   const [commodityGuid, setCommodityGuid] = useState("");
   const [code, setCode] = useState("");
   const [description, setDescription] = useState("");
@@ -162,7 +159,7 @@ export function AccountEditorSheet({
     return flattenAccounts(data.accounts);
   }, [data]);
 
-  const commodities = data?.commodities ?? [];
+  const commodities = useMemo(() => data?.commodities ?? [], [data?.commodities]);
   const isInvestment = INVESTMENT_TYPES.has(accountType);
 
   // Filter commodities based on account type
@@ -191,8 +188,6 @@ export function AccountEditorSheet({
       setName(editingAccount.name);
       setAccountType(editingAccount.type);
       setParentGuid(editingAccount.parentGuid ?? "");
-      const parent = accounts.find((a) => a.guid === editingAccount.parentGuid);
-      setParentPath(parent?.fullPath ?? "");
       setCommodityGuid(editingAccount.commodityGuid);
       setCode(""); // code not on AccountNode, will be preserved in DB
       setDescription("");
@@ -206,7 +201,7 @@ export function AccountEditorSheet({
         setCommodityGuid(data.currencyGuid);
       }
     }
-  }, [editingAccount, open, accounts, data]);
+  }, [editingAccount, open, data?.currencyGuid]);
 
   // When type changes, reset commodity if switching between investment/currency
   useEffect(() => {
@@ -224,13 +219,12 @@ export function AccountEditorSheet({
       }
       setShowNewCommodity(false);
     }
-  }, [accountType]);
+  }, [commodities, commodityGuid, data?.currencyGuid, isInvestment]);
 
   function resetForm() {
     setName("");
     setAccountType("EXPENSE");
     setParentGuid("");
-    setParentPath("");
     setCommodityGuid(data?.currencyGuid ?? "");
     setCode("");
     setDescription("");
@@ -258,7 +252,7 @@ export function AccountEditorSheet({
     setSaveError(null);
 
     try {
-      let finalCommodityGuid = commodityGuid;
+      const finalCommodityGuid = commodityGuid;
 
       // Create new commodity if needed
       if (showNewCommodity && isInvestment) {

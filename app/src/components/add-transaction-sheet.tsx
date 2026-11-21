@@ -11,8 +11,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { useDashboard } from "@/lib/dashboard-context";
 import { Plus, Trash2, AlertCircle, Check, Search } from "lucide-react";
-import type { AccountNode, LedgerTransaction } from "@/lib/types/gnucash";
-import type { CreateTransactionPayload, EditTransactionPayload } from "@/lib/gnucash/worker/messages";
+import type { LedgerTransaction } from "@/lib/types/gnucash";
+import type { CreateTransactionPayload } from "@/lib/gnucash/worker/messages";
 import { formatCurrency } from "@/lib/format";
 import { type FlatAccount, flattenAccounts, fuzzyMatch, isInvestmentType, ACCOUNT_TYPE_LABELS } from "@/lib/transaction-helpers";
 
@@ -53,12 +53,11 @@ function AccountCombobox({
   value: { guid: string; path: string };
   onChange: (account: FlatAccount | null) => void;
 }) {
-  const [query, setQuery] = useState(value.path);
+  const [draftQuery, setDraftQuery] = useState(value.path);
   const [open, setOpen] = useState(false);
   const [highlightIndex, setHighlightIndex] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => { setQuery(value.path); }, [value.path]);
+  const query = open ? draftQuery : value.path;
 
   const filtered = useMemo(() => {
     if (!query.trim()) return accounts.slice(0, 50);
@@ -84,7 +83,7 @@ function AccountCombobox({
   const selectItem = useCallback(
     (item: FlatAccount) => {
       onChange(item);
-      setQuery(item.fullPath);
+      setDraftQuery(item.fullPath);
       setOpen(false);
     },
     [onChange]
@@ -92,7 +91,7 @@ function AccountCombobox({
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (!open) {
-      if (e.key === "ArrowDown" || e.key === "Enter") { setOpen(true); e.preventDefault(); }
+      if (e.key === "ArrowDown" || e.key === "Enter") { setDraftQuery(value.path); setOpen(true); e.preventDefault(); }
       return;
     }
     switch (e.key) {
@@ -117,12 +116,12 @@ function AccountCombobox({
           type="text"
           value={query}
           onChange={(e) => {
-            setQuery(e.target.value);
+            setDraftQuery(e.target.value);
             setOpen(true);
             setHighlightIndex(0);
             if (!e.target.value) onChange(null);
           }}
-          onFocus={() => setOpen(true)}
+          onFocus={() => { setDraftQuery(value.path); setOpen(true); }}
           onBlur={() => setTimeout(() => setOpen(false), 200)}
           onKeyDown={handleKeyDown}
           placeholder="Search accounts..."
@@ -199,8 +198,6 @@ function InvestmentSplitRow({
   accounts: FlatAccount[];
   currency: string;
 }) {
-  // Track which two fields the user has filled in to auto-compute the third
-  const [pendingField, setPendingField] = useState<InvestmentField | null>(null);
   const [showRecalcPicker, setShowRecalcPicker] = useState(false);
   // Store the value the user just typed that triggered the conflict
   const pendingValue = useRef<{ field: InvestmentField; value: string } | null>(null);
@@ -264,7 +261,6 @@ function InvestmentSplitRow({
     // If all three are already filled and user edits one, ask which to recalculate
     if (allThreeFilled(split.shares, split.price, split.total) && parseNum(value) !== null) {
       pendingValue.current = { field, value };
-      setPendingField(field);
       setShowRecalcPicker(true);
       return;
     }
@@ -284,13 +280,11 @@ function InvestmentSplitRow({
     onUpdate(updates);
     setShowRecalcPicker(false);
     pendingValue.current = null;
-    setPendingField(null);
   }
 
   function handleRecalcCancel() {
     setShowRecalcPicker(false);
     pendingValue.current = null;
-    setPendingField(null);
   }
 
   return (
